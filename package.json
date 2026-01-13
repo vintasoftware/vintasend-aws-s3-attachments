@@ -1,0 +1,29 @@
+{
+  "name": "vintasend-aws-s3-attachments",
+  "version": "0.4.0",
+  "description": "Implementation of AWS S3 Attachments for VintaSend",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "files": [
+    "dist"
+  ],
+  "author": "Hugo Bessa",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.967.0",
+    "@aws-sdk/s3-request-presigner": "^3.967.0",
+    "vintasend": "../../.."
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.6",
+    "typescript": "^5.8.2"
+  }
+}
