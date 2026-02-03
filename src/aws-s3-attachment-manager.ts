@@ -141,6 +141,75 @@ export class S3AttachmentManager extends BaseAttachmentManager {
 	}
 
 	/**
+	 * Get file metadata by ID.
+	 *
+	 * For S3, this requires fetching the object metadata from S3.
+	 * The fileId is used to reconstruct the S3 key.
+	 *
+	 * Note: This implementation retrieves basic metadata from S3.
+	 * The checksum is retrieved from object metadata if available.
+	 *
+	 * @param fileId - The unique identifier of the file
+	 * @returns The file metadata or null if not found
+	 */
+	async getFile(fileId: string): Promise<AttachmentFileRecord | null> {
+		try {
+			// For S3, we need to list objects with the fileId prefix to find the actual key
+			const prefix = `${this.keyPrefix}${fileId}/`;
+
+			// Import HeadObjectCommand for metadata retrieval
+			const { HeadObjectCommand } = await import('@aws-sdk/client-s3');
+			const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
+
+			// List objects with the fileId prefix
+			const listCommand = new ListObjectsV2Command({
+				Bucket: this.bucket,
+				Prefix: prefix,
+				MaxKeys: 1,
+			});
+
+			const listResponse = await this.s3Client.send(listCommand);
+
+			if (!listResponse.Contents || listResponse.Contents.length === 0) {
+				return null;
+			}
+
+			const key = listResponse.Contents[0].Key;
+			if (!key) {
+				return null;
+			}
+
+			// Get detailed metadata
+			const headCommand = new HeadObjectCommand({
+				Bucket: this.bucket,
+				Key: key,
+			});
+
+			const headResponse = await this.s3Client.send(headCommand);
+
+			const filename = headResponse.Metadata?.originalFilename || key.split('/').pop() || 'unknown';
+			const checksum = headResponse.Metadata?.checksum || '';
+
+			return {
+				id: fileId,
+				filename,
+				contentType: headResponse.ContentType || 'application/octet-stream',
+				size: headResponse.ContentLength || 0,
+				checksum,
+				storageMetadata: {
+					bucket: this.bucket,
+					key,
+					region: this.s3Client.config.region,
+				},
+				createdAt: headResponse.LastModified || new Date(),
+				updatedAt: headResponse.LastModified || new Date(),
+			};
+		} catch (error) {
+			return null;
+		}
+	}
+
+	/**
 	 * Reconstruct an AttachmentFile accessor from storage metadata.
 	 *
 	 * This allows the system to recreate file access objects when loading
