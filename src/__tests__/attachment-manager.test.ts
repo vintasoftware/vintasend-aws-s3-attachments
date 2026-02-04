@@ -101,17 +101,18 @@ describe('S3AttachmentManager', () => {
 				contentType,
 				size: buffer.length,
 				checksum: expect.any(String),
-				storageMetadata: {
-					bucket: 'test-bucket',
-					key: expect.stringContaining(filename),
-					region: 'us-east-1',
+				storageIdentifiers: {
+					id: expect.any(String),
+					awsS3Bucket: 'test-bucket',
+					awsS3Key: expect.stringContaining(filename),
+					awsS3Region: 'us-east-1',
 				},
 				createdAt: expect.any(Date),
 				updatedAt: expect.any(Date),
 			});
 
 			// Verify the S3 key includes prefix and fileId
-			expect(result.storageMetadata.key).toMatch(/^attachments\/[a-f0-9-]+\/test\.txt$/);
+			expect(result.storageIdentifiers.awsS3Key).toMatch(/^attachments\/[a-f0-9-]+\/test\.txt$/);
 		});
 
 		it('should auto-detect content type if not provided', async () => {
@@ -161,7 +162,7 @@ describe('S3AttachmentManager', () => {
 			const result = await manager.uploadFile(buffer, filename);
 
 			// Verify filename is sanitized
-			expect(result.storageMetadata.key).toMatch(/file_with_spaces___special_chars\.txt$/);
+			expect(result.storageIdentifiers.awsS3Key).toMatch(/file_with_spaces___special_chars\.txt$/);
 		});
 
 		it('should upload with key prefix if configured', async () => {
@@ -169,7 +170,7 @@ describe('S3AttachmentManager', () => {
 
 			const result = await manager.uploadFile(Buffer.from('test'), 'file.txt');
 
-			expect(result.storageMetadata.key).toMatch(/^attachments\//);
+			expect(result.storageIdentifiers.awsS3Key).toMatch(/^attachments\//);
 		});
 
 		it('should work without key prefix', async () => {
@@ -184,7 +185,7 @@ describe('S3AttachmentManager', () => {
 			const result = await managerWithoutPrefix.uploadFile(Buffer.from('test'), 'file.txt');
 
 			// Should start with fileId, not prefix
-			expect(result.storageMetadata.key).toMatch(/^[a-f0-9-]+\/file\.txt$/);
+			expect(result.storageIdentifiers.awsS3Key).toMatch(/^[a-f0-9-]+\/file\.txt$/);
 		});
 
 		it('should handle file path string input', async () => {
@@ -199,25 +200,18 @@ describe('S3AttachmentManager', () => {
 		});
 	});
 
-	describe('deleteFile', () => {
-		it('should throw error requiring storage metadata', async () => {
-			await expect(manager.deleteFile('test-id')).rejects.toThrow(
-				'deleteFile() requires storage metadata for S3'
-			);
-		});
-	});
-
-	describe('deleteFileWithMetadata', () => {
-		it('should delete file from S3', async () => {
-			const storageMetadata = {
-				bucket: 'test-bucket',
-				key: 'attachments/test-id/file.txt',
-				region: 'us-east-1',
+	describe('deleteFileByIdentifiers', () => {
+		it('should delete file from S3 using identifiers', async () => {
+			const storageIdentifiers = {
+				id: 'test-id',
+				awsS3Bucket: 'test-bucket',
+				awsS3Key: 'attachments/test-id/file.txt',
+				awsS3Region: 'us-east-1',
 			};
 
 			mockS3Client.send.mockResolvedValueOnce({} as any);
 
-			await manager.deleteFileWithMetadata('test-id', storageMetadata);
+			await manager.deleteFileByIdentifiers(storageIdentifiers);
 
 			expect(mockS3Client.send).toHaveBeenCalledTimes(1);
 			expect(mockS3Client.send).toHaveBeenCalledWith(
@@ -225,27 +219,29 @@ describe('S3AttachmentManager', () => {
 			);
 		});
 
-		it('should throw error if key is missing from metadata', async () => {
-			const invalidMetadata = {
-				bucket: 'test-bucket',
-				region: 'us-east-1',
+		it('should throw error if awsS3Key is missing from identifiers', async () => {
+			const invalidIdentifiers = {
+				id: 'test-id',
+				awsS3Bucket: 'test-bucket',
+				awsS3Region: 'us-east-1',
 			};
 
-			await expect(manager.deleteFileWithMetadata('test-id', invalidMetadata)).rejects.toThrow(
-				'Storage metadata must contain key for S3 file deletion'
+			await expect(manager.deleteFileByIdentifiers(invalidIdentifiers)).rejects.toThrow(
+				'Storage identifiers must contain awsS3Key for S3 file deletion'
 			);
 		});
 	});
 
 	describe('reconstructAttachmentFile', () => {
-		it('should reconstruct AttachmentFile from metadata', () => {
-			const storageMetadata = {
-				bucket: 'test-bucket',
-				key: 'attachments/test-id/file.txt',
-				region: 'us-east-1',
+		it('should reconstruct AttachmentFile from storage identifiers', () => {
+			const storageIdentifiers = {
+				id: 'test-id',
+				awsS3Bucket: 'test-bucket',
+				awsS3Key: 'attachments/test-id/file.txt',
+				awsS3Region: 'us-east-1',
 			};
 
-			const attachmentFile = manager.reconstructAttachmentFile(storageMetadata);
+			const attachmentFile = manager.reconstructAttachmentFile(storageIdentifiers);
 
 			expect(attachmentFile).toBeDefined();
 			expect(typeof attachmentFile.read).toBe('function');
@@ -254,37 +250,42 @@ describe('S3AttachmentManager', () => {
 			expect(typeof attachmentFile.delete).toBe('function');
 		});
 
-		it('should throw error if metadata is missing bucket', () => {
-			const invalidMetadata = {
-				key: 'attachments/test-id/file.txt',
+		it('should throw error if identifiers missing awsS3Bucket', () => {
+			const invalidIdentifiers = {
+				id: 'test-id',
+				awsS3Key: 'attachments/test-id/file.txt',
+				awsS3Region: 'us-east-1',
 			};
 
-			expect(() => manager.reconstructAttachmentFile(invalidMetadata)).toThrow(
-				'Storage metadata must contain bucket and key for S3 files'
+			expect(() => manager.reconstructAttachmentFile(invalidIdentifiers)).toThrow(
+				'Storage identifiers must contain awsS3Bucket and awsS3Key for S3 files'
 			);
 		});
 
-		it('should throw error if metadata is missing key', () => {
-			const invalidMetadata = {
-				bucket: 'test-bucket',
+		it('should throw error if identifiers missing awsS3Key', () => {
+			const invalidIdentifiers = {
+				id: 'test-id',
+				awsS3Bucket: 'test-bucket',
+				awsS3Region: 'us-east-1',
 			};
 
-			expect(() => manager.reconstructAttachmentFile(invalidMetadata)).toThrow(
-				'Storage metadata must contain bucket and key for S3 files'
+			expect(() => manager.reconstructAttachmentFile(invalidIdentifiers)).toThrow(
+				'Storage identifiers must contain awsS3Bucket and awsS3Key for S3 files'
 			);
 		});
 	});
 
 	describe('S3AttachmentFile', () => {
 		let attachmentFile: any;
-		const storageMetadata = {
-			bucket: 'test-bucket',
-			key: 'attachments/test-id/file.txt',
-			region: 'us-east-1',
+		const storageIdentifiers = {
+			id: 'test-id',
+			awsS3Bucket: 'test-bucket',
+			awsS3Key: 'attachments/test-id/file.txt',
+			awsS3Region: 'us-east-1',
 		};
 
 		beforeEach(() => {
-			attachmentFile = manager.reconstructAttachmentFile(storageMetadata);
+			attachmentFile = manager.reconstructAttachmentFile(storageIdentifiers);
 		});
 
 		describe('read', () => {

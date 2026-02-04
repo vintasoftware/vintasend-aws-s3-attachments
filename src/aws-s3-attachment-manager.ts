@@ -3,7 +3,9 @@ import type {
 	AttachmentFileRecord,
 	AttachmentFile,
 	FileAttachment,
+	StorageIdentifiers,
 } from 'vintasend/dist/types/attachment';
+import type { S3StorageIdentifiers } from './types';
 import {
 	S3Client,
 	PutObjectCommand,
@@ -124,17 +126,20 @@ export class S3AttachmentManager extends BaseAttachmentManager {
 		await this.s3Client.send(putCommand);
 
 		// Return file record with S3 metadata
+		const storageIdentifiers: S3StorageIdentifiers = {
+			id: fileId,
+			awsS3Bucket: this.bucket,
+			awsS3Key: key,
+			awsS3Region: this.s3Client.config.region as string,
+		};
+
 		return {
 			id: fileId,
 			filename,
 			contentType: finalContentType,
 			size: buffer.length,
 			checksum,
-			storageMetadata: {
-				bucket: this.bucket,
-				key,
-				region: this.s3Client.config.region,
-			},
+			storageIdentifiers,
 			createdAt: new Date(),
 			updatedAt: new Date(),
 		};
@@ -196,10 +201,11 @@ export class S3AttachmentManager extends BaseAttachmentManager {
 				contentType: headResponse.ContentType || 'application/octet-stream',
 				size: headResponse.ContentLength || 0,
 				checksum,
-				storageMetadata: {
-					bucket: this.bucket,
-					key,
-					region: this.s3Client.config.region,
+				storageIdentifiers: {
+					id: fileId,
+					awsS3Bucket: this.bucket,
+					awsS3Key: key,
+					awsS3Region: this.s3Client.config.region as string,
 				},
 				createdAt: headResponse.LastModified || new Date(),
 				updatedAt: headResponse.LastModified || new Date(),
@@ -210,68 +216,52 @@ export class S3AttachmentManager extends BaseAttachmentManager {
 	}
 
 	/**
-	 * Reconstruct an AttachmentFile accessor from storage metadata.
+	 * Reconstruct an AttachmentFile accessor from storage identifiers.
 	 *
 	 * This allows the system to recreate file access objects when loading
 	 * notifications from the database.
 	 *
-	 * @param storageMetadata - S3 storage metadata (bucket, key, region)
+	 * @param storageIdentifiers - S3 storage identifiers (bucket, key, region)
 	 * @returns An S3AttachmentFile instance for accessing the file
 	 */
 	reconstructAttachmentFile(
-		storageMetadata: Record<string, unknown>,
+		storageIdentifiers: StorageIdentifiers,
 	): AttachmentFile {
-		if (!storageMetadata.key || !storageMetadata.bucket) {
+		const s3Identifiers = storageIdentifiers as S3StorageIdentifiers;
+
+		if (!s3Identifiers.awsS3Key || !s3Identifiers.awsS3Bucket) {
 			throw new Error(
-				'Storage metadata must contain bucket and key for S3 files',
+				'Storage identifiers must contain awsS3Bucket and awsS3Key for S3 files',
 			);
 		}
 
 		return new S3AttachmentFile(
 			this.s3Client,
-			storageMetadata.bucket as string,
-			storageMetadata.key as string,
+			s3Identifiers.awsS3Bucket,
+			s3Identifiers.awsS3Key,
 		);
 	}
 
 	/**
-	 * Delete a file from S3.
+	 * Delete a file from S3 using storage identifiers.
 	 *
-	 * Note: This implementation requires the Backend to pass full storage metadata
-	 * through a separate deleteFileWithMetadata() method, since the fileId alone
-	 * doesn't contain the S3 key needed for deletion.
+	 * The Backend should call this method to delete files, passing the
+	 * storage identifiers that were returned from uploadFile().
 	 *
-	 * For S3, the Backend should call deleteFileWithMetadata() instead.
-	 *
-	 * @param fileId - The unique identifier of the file
+	 * @param storageIdentifiers - The storage identifiers containing S3 key
 	 */
-	async deleteFile(fileId: string): Promise<void> {
-		throw new Error(
-			'deleteFile() requires storage metadata for S3. Use deleteFileWithMetadata() or delete directly via AttachmentFile.delete()',
-		);
-	}
+	async deleteFileByIdentifiers(storageIdentifiers: StorageIdentifiers): Promise<void> {
+		const s3Identifiers = storageIdentifiers as S3StorageIdentifiers;
 
-	/**
-	 * Delete a file from S3 using storage metadata.
-	 *
-	 * The Backend should call this method instead of deleteFile() for S3.
-	 *
-	 * @param fileId - The unique identifier of the file
-	 * @param storageMetadata - The storage metadata containing S3 key
-	 */
-	async deleteFileWithMetadata(
-		fileId: string,
-		storageMetadata: Record<string, unknown>,
-	): Promise<void> {
-		if (!storageMetadata.key) {
+		if (!s3Identifiers.awsS3Key) {
 			throw new Error(
-				'Storage metadata must contain key for S3 file deletion',
+				'Storage identifiers must contain awsS3Key for S3 file deletion',
 			);
 		}
 
 		const deleteCommand = new DeleteObjectCommand({
 			Bucket: this.bucket,
-			Key: storageMetadata.key as string,
+			Key: s3Identifiers.awsS3Key,
 		});
 
 		await this.s3Client.send(deleteCommand);
