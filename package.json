@@ -1,6 +1,6 @@
 {
   "name": "vintasend-aws-s3-attachments",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "Implementation of AWS S3 Attachments for VintaSend",
   "main": "dist/index.js",
   "scripts": {
@@ -18,7 +18,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.981.0",
     "@aws-sdk/s3-request-presigner": "^3.981.0",
-    "vintasend": "^0.5.0"
+    "vintasend": "^0.5.1"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",
