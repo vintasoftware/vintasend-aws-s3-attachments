@@ -3,10 +3,11 @@ import type { S3AttachmentManagerConfig } from '../aws-s3-attachment-manager';
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Readable } from 'node:stream';
+import { vi } from 'vitest';
 
 // Mock AWS SDK
-jest.mock('@aws-sdk/client-s3');
-jest.mock('@aws-sdk/s3-request-presigner');
+vi.mock('@aws-sdk/client-s3');
+vi.mock('@aws-sdk/s3-request-presigner');
 
 describe('S3AttachmentManager', () => {
 	let manager: S3AttachmentManager;
@@ -18,15 +19,17 @@ describe('S3AttachmentManager', () => {
 	};
 
 	beforeEach(() => {
-		jest.clearAllMocks();
+		vi.clearAllMocks();
 
 		// Create mock S3Client
 		mockS3Client = {
-			send: jest.fn(),
+			send: vi.fn(),
 			config: { region: 'us-east-1' },
 		};
 
-		(S3Client as jest.MockedClass<typeof S3Client>).mockImplementation(() => mockS3Client);
+		vi.mocked(S3Client).mockImplementation(function () {
+			return mockS3Client as never;
+		});
 
 		manager = new S3AttachmentManager(testConfig);
 	});
@@ -190,7 +193,7 @@ describe('S3AttachmentManager', () => {
 
 		it('should handle file path string input', async () => {
 			const fs = require('node:fs/promises');
-			jest.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('file content'));
+			vi.spyOn(fs, 'readFile').mockResolvedValue(Buffer.from('file content'));
 
 			mockS3Client.send.mockResolvedValueOnce({} as any);
 
@@ -328,7 +331,7 @@ describe('S3AttachmentManager', () => {
 
 		describe('url', () => {
 			it('should generate presigned URL with default expiration', async () => {
-				(getSignedUrl as jest.Mock).mockResolvedValue('https://signed-url.example.com');
+				vi.mocked(getSignedUrl).mockResolvedValue('https://signed-url.example.com');
 
 				const url = await attachmentFile.url();
 
@@ -341,7 +344,7 @@ describe('S3AttachmentManager', () => {
 			});
 
 			it('should generate presigned URL with custom expiration', async () => {
-				(getSignedUrl as jest.Mock).mockResolvedValue('https://signed-url.example.com');
+				vi.mocked(getSignedUrl).mockResolvedValue('https://signed-url.example.com');
 
 				const url = await attachmentFile.url(7200);
 
