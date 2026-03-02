@@ -1,4 +1,4 @@
-import type { StorageIdentifiers } from 'vintasend/dist/types/attachment';
+import type { StorageIdentifiers } from 'vintasend';
 
 /**
  * AWS S3-specific storage identifiers.
