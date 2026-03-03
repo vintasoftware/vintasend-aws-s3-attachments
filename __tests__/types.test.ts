@@ -1,4 +1,5 @@
 import type { S3StorageIdentifiers } from '../src/types';
+import { describe, it, expect } from 'vitest';
 
 describe('S3StorageIdentifiers', () => {
   it('should extend StorageIdentifiers with S3 fields', () => {
