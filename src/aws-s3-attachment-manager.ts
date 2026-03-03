@@ -14,7 +14,7 @@ import type {
   StorageIdentifiers,
 } from 'vintasend';
 import { BaseAttachmentManager } from 'vintasend';
-import type { S3StorageIdentifiers } from './types';
+import type { S3StorageIdentifiers } from './types.js';
 
 export interface S3AttachmentManagerConfig {
   /**
