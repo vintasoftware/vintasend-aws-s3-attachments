@@ -132,9 +132,7 @@ class _S3ManagerMixin:
         name = f"{uuid.uuid4().hex}_{filename}"
         return posixpath.join(self.prefix, name) if self.prefix else name
 
-    def _put(
-        self, data: bytes, filename: str, content_type: str | None
-    ) -> AttachmentFileRecord:
+    def _put(self, data: bytes, filename: str, content_type: str | None) -> AttachmentFileRecord:
         content_type = content_type or self.detect_content_type(filename)  # type: ignore[attr-defined]
         key = self._build_key(filename)
         self.client.put_object(

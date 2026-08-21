@@ -1,4 +1,4 @@
-# vintasend-s3-attachments
+# vintasend-aws-s3-attachments
 
 An AWS S3 [attachment manager](https://github.com/vintasoftware/vintasend) for
 [vintasend](https://github.com/vintasoftware/vintasend), backed by
@@ -13,9 +13,9 @@ vintasend backend that supports attachments (`vintasend-django`, `vintasend-sqla
 ## Install
 
 ```bash
-poetry add vintasend-s3-attachments
+poetry add vintasend-aws-s3-attachments
 # or
-pip install vintasend-s3-attachments
+pip install vintasend-aws-s3-attachments
 ```
 
 `boto3` comes as a dependency. AWS credentials and region are resolved the usual boto3 way
@@ -26,7 +26,7 @@ client.
 
 ```python
 from vintasend.services.notification_service import NotificationService
-from vintasend_s3_attachments import S3AttachmentManager
+from vintasend_aws_s3_attachments import S3AttachmentManager
 
 service = NotificationService(
     notification_adapters=[...],

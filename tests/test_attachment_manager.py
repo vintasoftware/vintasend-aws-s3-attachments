@@ -6,7 +6,7 @@ from botocore.exceptions import ClientError
 from vintasend.services.attachment_managers.asyncio_base import AsyncIOBaseAttachmentManager
 from vintasend.services.attachment_managers.base import BaseAttachmentManager
 
-from vintasend_s3_attachments.attachment_manager import (
+from vintasend_aws_s3_attachments.attachment_manager import (
     S3AsyncIOAttachmentManager,
     S3AttachmentManager,
     S3StoredFile,
@@ -148,9 +148,7 @@ class S3AttachmentManagerTestCase(TestCase):
 class S3AsyncIOAttachmentManagerTestCase(IsolatedAsyncioTestCase):
     def setUp(self) -> None:
         self.client = FakeS3Client()
-        self.manager = S3AsyncIOAttachmentManager(
-            "my-bucket", client=cast("S3Client", self.client)
-        )
+        self.manager = S3AsyncIOAttachmentManager("my-bucket", client=cast("S3Client", self.client))
 
     def test_subclasses_the_real_abc(self):
         assert issubclass(S3AsyncIOAttachmentManager, AsyncIOBaseAttachmentManager)

@@ -1,5 +1,5 @@
 [project]
-name = "vintasend-s3-attachments"
+name = "vintasend-aws-s3-attachments"
 version = "0.1.0"
 description = "AWS S3 attachment manager for vintasend, backed by boto3."
 authors = [{ name = "Your Name", email = "you@example.com" }]
@@ -11,21 +11,24 @@ requires-python = ">=3.10,<3.15"
 dynamic = ["dependencies"]
 
 [tool.poetry]
-packages = [{ include = "vintasend_s3_attachments" }]
+packages = [{ include = "vintasend_aws_s3_attachments" }]
 include = [
-  { path = "vintasend_s3_attachments/py.typed", format = "wheel" }
+  { path = "vintasend_aws_s3_attachments/py.typed", format = "wheel" }
 ]
 
 [tool.poetry.dependencies]
 # vintasend 2.0.0 is not published to PyPI yet, so we point at the local build in the
 # parent superproject's dist/. Swap this for `vintasend = "^2.0.0"` once it is released.
-vintasend = { path = "../../dist/vintasend-2.0.0-py3-none-any.whl" }
+vintasend = { path = "../..", develop = true }
 # boto3 is the AWS SDK this manager stores bytes through.
 boto3 = "^1.34.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.3"
 pytest-asyncio = "^1.4.0"
+pytest-xdist = {version = "^3.8.0", extras=["psutil"]}
+pytest-cov = "^7.1.0"
+tox = "^4.55.0"
 ruff = "^0.15.22"
 mypy = "^2.3.0"
 # Type stubs for the boto3 S3 client, used only for the TYPE_CHECKING-only S3Client hint.
@@ -116,7 +119,7 @@ python_files = ["test_*.py"]
 testpaths = ["tests"]
 
 [tool.mypy]
-files = ["vintasend_s3_attachments", "tests"]
+files = ["vintasend_aws_s3_attachments", "tests"]
 # Must track the MINIMUM Python this package supports.
 python_version = "3.10"
 show_error_codes = true

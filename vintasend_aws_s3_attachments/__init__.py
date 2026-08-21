@@ -1,4 +1,4 @@
-from vintasend_s3_attachments.attachment_manager import (
+from vintasend_aws_s3_attachments.attachment_manager import (
     S3AsyncIOAttachmentManager,
     S3AttachmentManager,
     S3StoredFile,
